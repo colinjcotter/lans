@@ -25,7 +25,7 @@ def mycross(u, v):
                 #vector cross vector
                 return u[0]*v[1] - u[1]*v[0]
             else:
-                assert(fd.as_ufl(v).ufl_shape == ()):
+                assert(fd.as_ufl(v).ufl_shape == ())
                 #vector cross scalar
                 return fd.as_vector((u[1]*v, -u[0]*v))
         else:
@@ -55,7 +55,7 @@ def mycurl(u):
             #vector curl
             return u[1].dx(0) - u[0].dx(1)
         else:
-            assert(fd.as_ufl(v).ufl_shape == ()):
+            assert(fd.as_ufl(v).ufl_shape == ())
             #scalar curl
             return fd.as_vector((u.dx(1), -u.dx(0)))
     else:
