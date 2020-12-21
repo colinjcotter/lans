@@ -1,0 +1,3 @@
+Tests for cross products - check forms are correct by explicitly forming
+something for a RHS, doing a projection and comparing
+Tests for Laplacian - verify a result from a convergence test
