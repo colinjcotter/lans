@@ -62,56 +62,64 @@ def mycurl(u):
         assert(d==3)
         return fd.curl(u)
 
-def get_laplace_form(u, du, kappa, nu=10, dirichlet_bdys={},
-                     use_bvalue=False):
+def get_laplace_form(u, du, kappa, dirichlet_bdys={},
+                     use_bvalue=False, nu=10):
     """Return a UFL form for the (minus, i.e. positive-definite) Laplacian
     plus boundary integrals
 
     :arg u: Trial function, or Coefficient
     :arg du: TestFunction
     :arg kappa: diffusion tensor
-    :arg nu: Float, stabilisation constant
     :arg dirichlet_bdys: dictionary with keys being tags of boundaries
     where Dirichlet conditions are enforced (for tangential cpts of
     vectors since normal components are enforced strongly) and values
     being expressions for the boundary values
     :arg use_bvalue: logical, if true, use the given boundary value 
     in the boundary integral (non-symmetric) otherwise use the unknown.
+    :arg nu: Float, stabilisation constant
     """
 
+    d = du.geometric_dimension()
+    
     if fd.as_ufl(kappa).ufl_shape == ():
-        kappa = fd.Identity*kappa
+        if d == 2:
+            kappa = fd.as_tensor([[kappa, 0],
+                                  [0, kappa]])
+        else:
+            kappa = fd.as_tensor([[kappa, 0, 0],
+                                  [0, kappa, 0],
+                                  [0, 0, kappa]])
 
-    mesh = du.functionspace().mesh
+    mesh = du.function_space().mesh()
     n = fd.FacetNormal(mesh)
     nu = fd.Constant(nu)
     h = fd.avg(fd.CellVolume(mesh))/fd.FacetArea(mesh)
 
-    lf = fd.inner(fd.grad(du), fd.dot(fd.kappa, fd.grad(u)))*fd.dx
+    lf = fd.inner(fd.grad(du), fd.dot(kappa, fd.grad(u)))*fd.dx
     #interior facet terms
     #consistent term
-    lf -= fd.inner(2*fd.avg(fd.out(du, n)),
-                   2*fd.avg(fd.dot(fd.kappa, fd.grad(u))))*fd.dS
+    lf -= fd.inner(2*fd.avg(fd.outer(du, n)),
+                   2*fd.avg(fd.dot(kappa, fd.grad(u))))*fd.dS
     #symmetric term
-    lf -= fd.inner(2*fd.avg(fd.out(u, n)),
-                   2*fd.avg(fd.dot(fd.kappa, fd.grad(du))))*fd.dS
+    lf -= fd.inner(2*fd.avg(fd.outer(u, n)),
+                   2*fd.avg(fd.dot(kappa, fd.grad(du))))*fd.dS
     #penalty term
     lf += nu*fd.inner(fd.jump(u)/h, fd.dot(fd.avg(kappa), fd.jump(du)))*fd.dS
 
     #exterior facet terms (for Dirichlet bcs for tangential components)
-    for bdy, bvalue in bdys.items():
+    for bdy, bvalue in dirichlet_bdys.items():
         #consistent term
-        lf -= fd.inner(fd.out(du, n),
-                       fd.dot(fd.kappa, fd.grad(u)))*fd.dS(bdy)
+        lf -= fd.inner(fd.outer(du, n),
+                       fd.dot(kappa, fd.grad(u)))*fd.ds(bdy)
         #symmetric term
         if use_bvalue:
-            lf -= fd.inner(fd.out(bvalue, n),
-                           fd.dot(fd.kappa, fd.grad(du)))*fd.dS(bdy)
+            lf -= fd.inner(fd.outer(bvalue, n),
+                           fd.dot(kappa, fd.grad(du)))*fd.ds(bdy)
         if use_bvalue:
-            lf -= fd.inner(fd.out(u, n),
-                           fd.dot(fd.kappa, fd.grad(du)))*fd.dS(bdy)
+            lf -= fd.inner(fd.outer(u, n),
+                           fd.dot(kappa, fd.grad(du)))*fd.ds(bdy)
         #penalty term
-        lf += nu*fd.inner((u0-bvalue)/h,
+        lf += nu*fd.inner((u-bvalue)/h,
                           fd.dot(kappa, du))*fd.ds(bdy)
 
     return lf
