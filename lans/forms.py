@@ -109,6 +109,7 @@ def get_laplace_form(mesh, u, du, kappa, dirichlet_bdys,
 
     #exterior facet terms (for Dirichlet bcs for tangential components)
     for bdy, bvalue in dirichlet_bdys.items():
+        print("bdy", bdy)
         #consistent term
         lf -= fd.inner(fd.outer(du, n),
                        fd.dot(kappa, fd.grad(u)))*fd.ds(bdy)

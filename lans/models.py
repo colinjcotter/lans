@@ -49,6 +49,8 @@ class LANS_timestepper(object):
         :arg advection: If True, include the advection and diamond terms.
         """
 
+        print("EVERYTHING STOKES IS BACKWARD EULER AT THE MOMENT")
+        
         gamma = fd.Constant(gamma)
         alpha = fd.Constant(alpha)
         nu = fd.Constant(nu)
@@ -98,7 +100,7 @@ class LANS_timestepper(object):
 
         if advection:
             #advection 
-            eqn += dt*forms.get_advective_form(mesh, unh, vnh, dv,
+            eqn += dt*forms.get_advective_form(mesh, unp, vnh, dv,
                                                v_inflow_bdys,
                                                v_not_inflow_bdys)
 
@@ -106,7 +108,8 @@ class LANS_timestepper(object):
             eqn += dt*forms.get_diamond(mesh, unh, dv, alpha)
 
         #viscosity (applied to v)
-        eqn += dt*forms.get_laplace_form(mesh, vnh, du, nu,
+        eqn += dt*forms.get_laplace_form(mesh, vnp, du, nu,
+                                         dirichlet_bdys=
                                          v_tangential_dirichlet_bdys)
 
         bcs = []
@@ -117,7 +120,8 @@ class LANS_timestepper(object):
                                      [bvalue[0], bvalue[1]]])
             else:
                 bvalues = fd.as_tensor([[bvalue[0], bvalue[1], bvalue[2]],
-                                     [bvalue[0], bvalue[1], bvalue[2]]])
+                                        [bvalue[0], bvalue[1], bvalue[2]],
+                                        [bvalue[0], bvalue[1], bvalue[2]]])
             bcs.append(fd.DirichletBC(W.sub(0), bvalues, bdy))
 
         lans_prob = fd.NonlinearVariationalProblem(eqn, wnp, bcs=bcs)
@@ -155,6 +159,12 @@ class LANS_timestepper(object):
         }
         sparameters["fieldsplit_0"] = topleft_LU
         ctx = {"mu": nu/gamma/2}
+
+        sparameters={'ksp_type':'preonly',
+                     'mat_type':'aij',
+                     'pc_type':'lu',
+                     "pc_factor_mat_solver_type": "mumps"}
+
         self.solver = fd.NonlinearVariationalSolver(lans_prob,
                                                     solver_parameters=sparameters,
                                                     appctx=ctx)
@@ -172,6 +182,7 @@ class LANS_timestepper(object):
             t += self.dt
             if verbose:
                 print(t, self.dt, tmax)
+                print(fd.norm(fd.div(un)), "div")
             self.solver.solve()
             self.wn.assign(self.wnp)
 
