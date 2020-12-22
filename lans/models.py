@@ -6,7 +6,8 @@ class LANS_timestepper(object):
     def __init__(self, mesh, degree, gamma, alpha, nu, dt,
                  uv_normal_dirichlet_bdys, u_tangential_dirichlet_bdys,
                  v_tangential_dirichlet_bdys,
-                 v_inflow_bdys, v_not_inflow_bdys):
+                 v_inflow_bdys, v_not_inflow_bdys,
+                 advection=True):
         """:arg mesh: the mesh to solve on
         :arg degree: integer, the degree of the BDM space.
         :arg gamma: float, the interior penalty stabilisation parameter
@@ -44,6 +45,8 @@ class LANS_timestepper(object):
         Dirichlet conditions are not enforced for v (for tangential
         cpts of vectors since normal components are enforced strongly)
         and values being expressions for the boundary values
+
+        :arg advection: If True, include the advection and diamond terms.
         """
 
         gamma = fd.Constant(gamma)
@@ -82,21 +85,25 @@ class LANS_timestepper(object):
         eqn += forms.get_laplace_form(mesh, unp, du, alpha**2,
                                 dirichlet_bdys=u_tangential_dirichlet_bdys)
         #pressure stabilisation
-        eqn += gamma*fd.div(du)*fd.div(unp)*fd.dx
+        eqn += gamma*fd.div(dv)*fd.div(unp)*fd.dx
 
+        #pressure gradient term
+        eqn -= dt*fd.div(dv)*pnp*fd.dx
+        
         #continuity equation
         eqn += dp*fd.div(unp)*fd.dx
 
         #time-derivative
         eqn += fd.inner(dv, vnp - vn)*fd.dx
 
-        #advection 
-        eqn += dt*forms.get_advective_form(mesh, unh, vnh, dv,
-                                     v_inflow_bdys,
-                                     v_not_inflow_bdys)
+        if advection:
+            #advection 
+            eqn += dt*forms.get_advective_form(mesh, unh, vnh, dv,
+                                               v_inflow_bdys,
+                                               v_not_inflow_bdys)
 
-        #diamond
-        eqn += dt*forms.get_diamond(mesh, unh, dv, alpha)
+            #diamond
+            eqn += dt*forms.get_diamond(mesh, unh, dv, alpha)
 
         #viscosity (applied to v)
         eqn += dt*forms.get_laplace_form(mesh, vnh, du, nu,
@@ -109,9 +116,9 @@ class LANS_timestepper(object):
                 bvalues = fd.as_tensor([[bvalue[0], bvalue[1]],
                                      [bvalue[0], bvalue[1]]])
             else:
-                bvalues = fd.as_tensor([[bvalue[0], bvalue[1], bvalue[2]]
+                bvalues = fd.as_tensor([[bvalue[0], bvalue[1], bvalue[2]],
                                      [bvalue[0], bvalue[1], bvalue[2]]])
-                bcs.append(fd.DirichletBC(W.sub(0), bvalue, bdy))
+            bcs.append(fd.DirichletBC(W.sub(0), bvalues, bdy))
 
         lans_prob = fd.NonlinearVariationalProblem(eqn, wnp, bcs=bcs)
 
@@ -147,8 +154,10 @@ class LANS_timestepper(object):
             "assembled_pc_factor_mat_solver_type": "mumps"
         }
         sparameters["fieldsplit_0"] = topleft_LU
+        ctx = {"mu": nu/gamma/2}
         self.solver = fd.NonlinearVariationalSolver(lans_prob,
-                                                 solver_parameters=sparameters)
+                                                    solver_parameters=sparameters,
+                                                    appctx=ctx)
 
     def run(self, tmax, dumpt, filename, verbose=False):
         t = 0.
@@ -166,6 +175,7 @@ class LANS_timestepper(object):
             self.solver.solve()
             self.wn.assign(self.wnp)
 
+            tdump += self.dt
             if tdump > dumpt - self.dt/2:
-                tdump -= self.dt
+                tdump -= dumpt
                 f.write(un, vn, pn)
