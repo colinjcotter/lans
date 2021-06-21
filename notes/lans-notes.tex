@@ -1,0 +1,41 @@
+\documentclass{article}
+\usepackage[nosumlimits]{amsmath}
+\usepackage{amssymb,amsthm,MnSymbol}
+\def\MM#1{\boldsymbol{#1}}
+\newcommand{\pp}[2]{\frac{\partial #1}{\partial #2}} 
+\newcommand{\dede}[2]{\frac{\delta #1}{\delta #2}}
+\newcommand{\dd}[2]{\frac{\diff#1}{\diff#2}}
+\newcommand{\dt}[1]{\diff\!#1}
+\def\MM#1{\boldsymbol{#1}}
+\DeclareMathOperator{\diff}{d}
+\DeclareMathOperator{\DIV}{DIV}
+\DeclareMathOperator{\D}{D}
+\usepackage{amscd}
+\usepackage{natbib}
+\bibliographystyle{elsarticle-harv}
+\usepackage{helvet}
+\usepackage{amsfonts}
+\renewcommand{\familydefault}{\sfdefault} %% Only if the base font of the docume
+\newcommand{\vecx}[1]{\MM{#1}}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}[theorem]{Definition}
+\newtheorem{lemma}[theorem]{Lemma}
+\newcommand{\code}[1]{{\ttfamily #1}} 
+\usepackage[margin=2cm]{geometry}
+\newcommand{\jump}[1]{\left[\!\!\left[ #1 \right]\!\!\right]}
+
+\usepackage{fancybox}
+\begin{document}
+\title{Notes on LANS-alpha equations}
+\author{All of Us}
+\maketitle
+
+LANS-alpha equations in Lie derivative form:
+\begin{align}
+  \MM{v}_t + \nabla\times \MM{v}\times \MM{u} + \nabla(\MM{v}\cdot\MM{u})
+  &= -\nabla \left(p - \frac{1}{2}|\MM{v}|^2 + \frac{\alpha^2}{2}|\nabla\MM{v}|^2\right) - \nu A\MM{u}, \\
+  (I - \alpha^2\nabla^2)\MM{u} & = \MM{v}, \\
+  \nabla\cdot\MM{u} & = 0
+\end{align}
+
+\end{document}
