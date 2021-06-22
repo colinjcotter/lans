@@ -30,12 +30,38 @@
 \author{All of Us}
 \maketitle
 
-LANS-alpha equations in Lie derivative form:
+Marsden and Schkoller version of LANS-alpha equations in Lie
+derivative form:
 \begin{align}
   \MM{v}_t + \nabla\times \MM{v}\times \MM{u} + \nabla(\MM{v}\cdot\MM{u})
-  &= -\nabla \left(p - \frac{1}{2}|\MM{v}|^2 + \frac{\alpha^2}{2}|\nabla\MM{v}|^2\right) - \nu A\MM{u}, \\
+  &= -\nabla \left(p - \frac{1}{2}|\MM{v}|^2 + \frac{\alpha^2}{2}|\nabla\MM{v}|^2\right) + \nu (1-\alpha^2\nabla^2)A\MM{u}, \\
   (I - \alpha^2\nabla^2)\MM{u} & = \MM{v}, \\
-  \nabla\cdot\MM{u} & = 0
+  \nabla\cdot\MM{u} & = 0,
 \end{align}
+where $A$ is the Stokes Leray projector, with no-slip boundary
+conditions $\MM{u}=0$, $A\MM{u}=0$. To remove the projection operator we
+introduce additional variables, to get
+\begin{align}
+  \label{eq:lans v}
+  \MM{v}_t + (\nabla\times \MM{v})\times \MM{u} + \nabla(\MM{v}\cdot\MM{u})
+  &= -\nabla \left(p - \frac{1}{2}|\MM{v}|^2 - \frac{\alpha^2}{2}|\nabla\MM{v}|^2\right) + \nu (1-\alpha^2\nabla^2)\MM{w}, \\
+  (I - \alpha^2\nabla^2)\MM{u} & = \MM{v}, \\
+  \nabla\cdot\MM{u} & = 0, \\
+  -\nabla^2 \MM{u} + \nabla \phi & = \MM{w}, \\
+  \nabla\cdot\MM{w} & = 0,
+\end{align}
+with the no-slip boundary conditions $\MM{u}=\MM{w}=0$.
+
+The justification for the boundary condition for $\MM{w}$ is that if
+we define $L = (1-\alpha^2\nabla^2):H^1_0\to L^2$, then using
+$\MM{v}_t=(1-\alpha^2\nabla^2)\MM{u}_t$ in \eqref{eq:lans v} and
+linearity of $L$, and inverting $L$, we get
+\begin{equation}
+  \MM{u}_t + L^{-1}(\nabla\times \MM{v})\times \MM{u} +
+  L^{-1}\left(\nabla(\MM{v}\cdot\MM{u}) - p + \frac{1}{2}|\MM{v}|^2 + \frac{\alpha^2}{2}|\nabla\MM{v}|^2\right) = -\nu L^{-1}L\MM{w},
+\end{equation}
+which is consistent on the boundary if $\MM{w}=0$ on the boundary,
+since $L^{-1}$ applied to anything is zero on the boundary, and
+$\MM{u}_t$ is zero on the boundary.
 
 \end{document}
