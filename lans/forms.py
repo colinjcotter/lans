@@ -63,7 +63,7 @@ def mycurl(u):
         return fd.curl(u)
 
 def get_laplace_form(mesh, u, du, kappa, dirichlet_bdys,
-                     use_bvalue=False, rho=10):
+                     use_bvalue=False, rho=10, surface=False):
     """
     Return a UFL form for the (minus, i.e. positive-definite) Laplacian
     plus boundary integrals
@@ -109,7 +109,6 @@ def get_laplace_form(mesh, u, du, kappa, dirichlet_bdys,
 
     #exterior facet terms (for Dirichlet bcs for tangential components)
     for bdy, bvalue in dirichlet_bdys.items():
-        print("bdy", bdy)
         #consistent term
         lf -= fd.inner(fd.outer(du, n),
                        fd.dot(kappa, fd.grad(u)))*fd.ds(bdy)
@@ -123,7 +122,6 @@ def get_laplace_form(mesh, u, du, kappa, dirichlet_bdys,
         #penalty term
         lf += rho*fd.inner((u-bvalue)/h,
                           fd.dot(kappa, du))*fd.ds(bdy)
-
     return lf
 
 def both(u):

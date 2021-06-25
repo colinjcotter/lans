@@ -55,7 +55,9 @@ class LANS_timestepper(object):
         
         V = fd.FunctionSpace(mesh, "BDM", degree)
         VV = fd.VectorFunctionSpace(mesh, "BDM", degree, dim=3)
+        #VV contains u-v-w
         QQ = fd.FunctionSpace(mesh, "DG", degree-1, dim=2)
+        #QQ contains p-q
         W = VV * QQ
 
         wn = fd.Function(W) #state at timestep n
@@ -86,7 +88,9 @@ class LANS_timestepper(object):
         #u-v relation
         eqn = fd.inner(du, unp - vnp)*fd.dx
         eqn += forms.get_laplace_form(mesh, unp, du, alpha**2,
-                                dirichlet_bdys=u_tangential_dirichlet_bdys)
+                                      dirichlet_bdys=
+                                      u_tangential_dirichlet_bdys,
+                                      surface=True)
 
         #continuity equation
         eqn += dp*fd.div(unp)*fd.dx
@@ -125,14 +129,10 @@ class LANS_timestepper(object):
         bcs = []
         d = wn.geometric_dimension()
         for bdy, bvalue in uv_normal_dirichlet_bdys.items():
-            if d == 2:
-                bvalues = fd.as_tensor([[bvalue[0], bvalue[1]],
-                                        [bvalue[0], bvalue[1]]])
-            else:
-                bvalues = fd.as_tensor([[bvalue[0], bvalue[1], bvalue[2]],
-                                        [bvalue[0], bvalue[1], bvalue[2]],
-                                        [bvalue[0], bvalue[1], bvalue[2]]])
-            bcs.append(fd.DirichletBC(W.sub(0), bvalues, bdy))
+            #u bc conditions
+            bcs.append(fd.DirichletBC(W.sub(0).sub(0), bvalues, bdy))
+            #w bc conditions
+            bcs.append(fd.DirichletBC(W.sub(0).sub(2), bvalues, bdy))
 
         lans_prob = fd.NonlinearVariationalProblem(eqn, wnp, bcs=bcs)
 
@@ -187,7 +187,8 @@ class LANS_timestepper(object):
         uun, pn = self.wn.split()
         un = uun.sub(0)
         vn = uun.sub(1)
-
+        self.wnp.assign(self.wnp)
+        
         while t < tmax - self.dt/2:
             t += self.dt
             if verbose:
