@@ -56,7 +56,7 @@ class LANS_timestepper(object):
         V = fd.FunctionSpace(mesh, "BDM", degree)
         VV = fd.VectorFunctionSpace(mesh, "BDM", degree, dim=3)
         #VV contains u-v-w
-        QQ = fd.FunctionSpace(mesh, "DG", degree-1, dim=2)
+        QQ = fd.VectorFunctionSpace(mesh, "DG", degree-1, dim=2)
         #QQ contains p-q
         W = VV * QQ
 

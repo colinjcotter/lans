@@ -27,8 +27,7 @@ stepper = \
                      u_tangential_dirichlet_bdys=u_tangential_dirichlet_bdys,
                      v_tangential_dirichlet_bdys=v_tangential_dirichlet_bdys,
                      v_inflow_bdys=v_inflow_bdys,
-                     v_not_inflow_bdys=v_not_inflow_bdys,
-                     advection=False)
+                     v_not_inflow_bdys=v_not_inflow_bdys)
 
 stepper.run(tmax=10., dumpt=0.01,
             filename='channel', verbose=True)
