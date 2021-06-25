@@ -6,8 +6,7 @@ class LANS_timestepper(object):
     def __init__(self, mesh, degree, gamma, alpha, nu, dt,
                  uv_normal_dirichlet_bdys, u_tangential_dirichlet_bdys,
                  v_tangential_dirichlet_bdys,
-                 v_inflow_bdys, v_not_inflow_bdys,
-                 advection=True):
+                 v_inflow_bdys, v_not_inflow_bdys):
         """:arg mesh: the mesh to solve on
         :arg degree: integer, the degree of the BDM space.
         :arg gamma: float, the interior penalty stabilisation parameter
@@ -45,79 +44,90 @@ class LANS_timestepper(object):
         Dirichlet conditions are not enforced for v (for tangential
         cpts of vectors since normal components are enforced strongly)
         and values being expressions for the boundary values
-
-        :arg advection: If True, include the advection and diamond terms.
         """
 
-        print("EVERYTHING STOKES IS BACKWARD EULER AT THE MOMENT")
-        
         gamma = fd.Constant(gamma)
         alpha = fd.Constant(alpha)
         nu = fd.Constant(nu)
         self.dt = dt
         dt = fd.Constant(dt)
+        beta = fd.Constant(1.0) #advection scaling parameter
         
         V = fd.FunctionSpace(mesh, "BDM", degree)
-        VV = fd.VectorFunctionSpace(mesh, "BDM", degree, dim=2)
-        Q = fd.FunctionSpace(mesh, "DG", degree-1)
-        W = VV * Q
+        VV = fd.VectorFunctionSpace(mesh, "BDM", degree, dim=3)
+        QQ = fd.FunctionSpace(mesh, "DG", degree-1, dim=2)
+        W = VV * QQ
 
         wn = fd.Function(W) #state at timestep n
         wnp = fd.Function(W) #state at timestep n+1
 
         self.wn = wn
         self.wnp = wnp
-        
+
         uun, pn = fd.split(wn)
         un = uun[0, :]
-        vn = uun[1, :]
         uunp, pnp = fd.split(wnp)
         unp = uunp[0, :]
-        vnp = uunp[1, :]
-
+        vnh = uunp[1, :]
+        wnh = uunp[2, :]
+        pnh = pnp[0]
+        qnh = pnp[1]
+        
         unh = (un + unp)/2
         vnh = (vn + vnp)/2
         
-        duu, dp = fd.TestFunctions(W)
+        duu, dpp = fd.TestFunctions(W)
         du = duu[0, :]
         dv = duu[1, :]
-
-        #u-v relation 
+        dw = duu[2, :]
+        dp = dpp[0]
+        dq = dpp[1]
+        
+        #u-v relation
         eqn = fd.inner(du, unp - vnp)*fd.dx
         eqn += forms.get_laplace_form(mesh, unp, du, alpha**2,
                                 dirichlet_bdys=u_tangential_dirichlet_bdys)
-        #pressure stabilisation
-        eqn += gamma*fd.div(dv)*fd.div(unp)*fd.dx
 
-        #pressure gradient term
-        eqn -= dt*fd.div(dv)*pnp*fd.dx
-        
         #continuity equation
         eqn += dp*fd.div(unp)*fd.dx
-
+        
+        #circulation equation
+        #pressure stabilisation
+        eqn += gamma*fd.div(dv)*fd.div(unp)*fd.dx
+        #pressure gradient term (we scale pressure by dt)
+        eqn -= fd.div(dv)*pnh*fd.dx
         #time-derivative
-        eqn += fd.inner(dv, vnp - vn)*fd.dx
-
-        if advection:
-            #advection 
-            eqn += dt*forms.get_advective_form(mesh, unp, vnh, dv,
-                                               v_inflow_bdys,
-                                               v_not_inflow_bdys)
-
-            #diamond
-            eqn += dt*forms.get_diamond(mesh, unh, dv, alpha)
-
-        #viscosity (applied to v)
-        eqn += dt*forms.get_laplace_form(mesh, vnp, du, nu,
+        eqn += fd.inner(dv, unp - un)*fd.dx
+        eqn += forms.get_laplace_form(mesh, unp - un,
+                                      du, alpha**2,
+                                      dirichlet_bdys=
+                                      u_tangential_dirichlet_bdys)
+        #advection
+        eqn += dt*forms.get_advective_form(mesh, unp, vnh, dv,
+                                           v_inflow_bdys,
+                                           v_not_inflow_bdys)
+        #viscosity
+        eqn += dt*nu*inner(dv, wmh)
+        eqn += dt*forms.get_laplace_form(mesh, wnh, dv, nu,
                                          dirichlet_bdys=
                                          v_tangential_dirichlet_bdys)
+
+        #vector equation in Stokes operator
+        eqn += forms.get_laplace_form(mesh, wnh, dw, nu,
+                                         dirichlet_bdys=
+                                         v_tangential_dirichlet_bdys)
+        eqn -= fd.div(dw)*qnh*fd.dx
+        #pressure stabilisation
+        eqn += gamma*fd.div(dw)*fd.div(wnh)*fd.dx
+        #divergence constraint for viscosity
+        eqn += fd.div(wnh)*dq*fd.dx
 
         bcs = []
         d = wn.geometric_dimension()
         for bdy, bvalue in uv_normal_dirichlet_bdys.items():
             if d == 2:
                 bvalues = fd.as_tensor([[bvalue[0], bvalue[1]],
-                                     [bvalue[0], bvalue[1]]])
+                                        [bvalue[0], bvalue[1]]])
             else:
                 bvalues = fd.as_tensor([[bvalue[0], bvalue[1], bvalue[2]],
                                         [bvalue[0], bvalue[1], bvalue[2]],
